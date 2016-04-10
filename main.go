@@ -139,7 +139,9 @@ func main() {
 					curDownSpeedByte = 0
 				}
 			}
-			log.Printf("Setting speeds - down: %.3f Mb/s, up: %.3f Mb/s\n", byteToMegabit(curDownSpeedByte), byteToMegabit(curUpSpeedByte))
+			log.Printf("Setting speeds - down: %.3f Mb/s, up: %.3f Mb/s\n",
+				byteToMegabit(curDownSpeedByte),
+				byteToMegabit(curUpSpeedByte))
 		}
 
 		started = true
