@@ -132,9 +132,9 @@ func main() {
 				curUpSpeedByte = 0
 				log.Print("Not enough peers, stalling")
 			} else {
-				curUpSpeedByte = baseUpSpeedByte + int64((mathrand.Float64()-0.5)*2*upMargin*float64(baseUpSpeedByte))
+				curUpSpeedByte = baseUpSpeedByte + int64(randMargin(baseUpSpeedByte, upMargin))
 				if mi.Info.TotalLength()-downloaded > 0 {
-					curDownSpeedByte = baseDownSpeedByte + int64((mathrand.Float64()-0.5)*2*downMargin*float64(baseDownSpeedByte))
+					curDownSpeedByte = baseDownSpeedByte + int64(randMargin(baseDownSpeedByte, downMargin))
 				} else {
 					curDownSpeedByte = 0
 				}
@@ -149,6 +149,10 @@ func main() {
 		log.Println("Next announce at", time.Now().Add(sleepFor).Format(time.Kitchen))
 		time.Sleep(sleepFor)
 	}
+}
+
+func randMargin(n int64, margin float64) float64 {
+	return (mathrand.Float64() - 0.5) * 2 * margin * float64(n)
 }
 
 func byteToMegabit(b int64) float64 {
