@@ -122,7 +122,7 @@ func main() {
 			resp, err = tracker.Announce(mi.Announce, req)
 			if err != nil {
 				hasResp = false
-				log.Print("Announce error")
+				log.Println("Announce error:", err)
 			} else {
 				respTime = time.Now()
 			}
