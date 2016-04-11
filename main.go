@@ -49,8 +49,8 @@ func main() {
 		log.Fatal("Must specify download speed and upload speed")
 	}
 
-	if flag.NArg() == 0 {
-		log.Fatal("Missing torrent filename")
+	if flag.NArg() != 1 {
+		log.Fatal("One torrent file required")
 	}
 
 	filename := flag.Arg(0)
