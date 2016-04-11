@@ -23,7 +23,8 @@ var (
 
 	peerID               [20]byte
 	mi                   *metainfo.MetaInfo
-	prevRespTime         time.Time
+	lastSuccessfulResp   tracker.AnnounceResponse
+	lastRespTime         time.Time
 	started              bool
 	downloaded, uploaded int64 // bytes
 )
@@ -76,7 +77,7 @@ func main() {
 		}
 
 		if started {
-			sincePrevResp := time.Since(prevRespTime).Seconds()
+			sincePrevResp := time.Since(lastRespTime).Seconds()
 			downloaded += int64(float64(curDownSpeedByte) * sincePrevResp)
 			downloaded = int64(math.Min(float64(downloaded), float64(mi.Info.TotalLength())))
 			uploaded += int64(float64(curUpSpeedByte) * sincePrevResp)
@@ -120,12 +121,16 @@ func main() {
 			}
 			var err error
 			resp, err = tracker.Announce(mi.Announce, req)
+			respTime = time.Now()
 			if err != nil {
 				hasResp = false
 				log.Println("Announce error:", err)
-			} else {
-				respTime = time.Now()
 			}
+		}
+
+		sleepFor := time.Duration(resp.Interval) * time.Second
+		if !hasResp {
+			sleepFor = time.Duration(lastSuccessfulResp.Interval) * time.Second
 		}
 
 		if hasResp {
@@ -145,12 +150,12 @@ func main() {
 			log.Printf("Setting speeds - down: %.3f Mb/s, up: %.3f Mb/s\n",
 				byteToMegabit(curDownSpeedByte),
 				byteToMegabit(curUpSpeedByte))
+			lastSuccessfulResp = resp
 		}
 
 		started = true
-		prevRespTime = respTime
+		lastRespTime = respTime
 
-		sleepFor := time.Duration(resp.Interval) * time.Second
 		log.Println("Next announce at", time.Now().Add(sleepFor).Format(time.Kitchen))
 		time.Sleep(sleepFor)
 	}
