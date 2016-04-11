@@ -115,6 +115,9 @@ func main() {
 			}
 		} else {
 			log.Printf("Announcing - downloaded: %d bytes, uploaded: %d bytes", downloaded, uploaded)
+			if event != tracker.None {
+				log.Println("Event:", event)
+			}
 			var err error
 			resp, err = tracker.Announce(mi.Announce, req)
 			if err != nil {
