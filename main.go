@@ -25,7 +25,7 @@ var (
 	mi                   *metainfo.MetaInfo
 	lastSuccessfulResp   tracker.AnnounceResponse
 	lastRespTime         time.Time
-	started              bool
+	started, completed   bool
 	downloaded, uploaded int64 // bytes
 )
 
@@ -82,8 +82,9 @@ func main() {
 			downloaded = int64(math.Min(float64(downloaded), float64(mi.Info.TotalLength())))
 			uploaded += int64(float64(curUpSpeedByte) * sincePrevResp)
 
-			if downloaded == mi.Info.TotalLength() {
+			if downloaded == mi.Info.TotalLength() && !completed {
 				event = tracker.Completed
+				completed = true
 			}
 		}
 
