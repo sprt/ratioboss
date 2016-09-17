@@ -1,0 +1,73 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/anacrolix/envpprof",
+			"repository": "https://github.com/anacrolix/envpprof",
+			"vcs": "git",
+			"revision": "0383bfe017e02efb418ffd595fc54777a35e48b0",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/anacrolix/missinggo",
+			"repository": "https://github.com/anacrolix/missinggo",
+			"vcs": "git",
+			"revision": "86f106025d38e0baf732bb3e6761ab16e87d96cb",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/anacrolix/tagflag",
+			"repository": "https://github.com/anacrolix/tagflag",
+			"vcs": "git",
+			"revision": "37f7ff37cf0031af33bce62bc878a99a98749739",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/anacrolix/torrent/bencode",
+			"repository": "https://github.com/anacrolix/torrent",
+			"vcs": "git",
+			"revision": "9a4fbb01f0d2563f2e2cd36c1cb8937016a80279",
+			"branch": "master",
+			"path": "/bencode",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/anacrolix/torrent/metainfo",
+			"repository": "https://github.com/anacrolix/torrent",
+			"vcs": "git",
+			"revision": "9a4fbb01f0d2563f2e2cd36c1cb8937016a80279",
+			"branch": "master",
+			"path": "/metainfo",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/anacrolix/torrent/tracker",
+			"repository": "https://github.com/anacrolix/torrent",
+			"vcs": "git",
+			"revision": "9a4fbb01f0d2563f2e2cd36c1cb8937016a80279",
+			"branch": "master",
+			"path": "/tracker",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/anacrolix/torrent/util",
+			"repository": "https://github.com/anacrolix/torrent",
+			"vcs": "git",
+			"revision": "9a4fbb01f0d2563f2e2cd36c1cb8937016a80279",
+			"branch": "master",
+			"path": "/util",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/sprt/bytefmt",
+			"repository": "https://github.com/sprt/bytefmt",
+			"vcs": "git",
+			"revision": "a866281ea045cca3243413cd80005a1dbdc75e58",
+			"branch": "master",
+			"notests": true
+		}
+	]
+}

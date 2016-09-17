@@ -1,199 +1,148 @@
 package main
 
 import (
-	cryptorand "crypto/rand"
 	"flag"
 	"fmt"
 	"log"
-	"math"
-	mathrand "math/rand"
+	"math/rand"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/tracker"
+	"github.com/sprt/bytefmt"
+)
+
+const (
+	noise         = 0.3
+	retryInterval = 30 * time.Second
 )
 
 var (
-	minSeeders, minLeechers    int
-	baseDownSpeed, baseUpSpeed float64 // megabit/s
-	downMargin, upMargin       float64 // percentage
+	downSpeed, upSpeed bytefmt.ByteSize
 
-	baseDownSpeedByte, baseUpSpeedByte int64 // byte/s
-	curDownSpeedByte, curUpSpeedByte   int64 // byte/s
+	announceURL  string
+	hash, peerID metainfo.Hash
+	size         bytefmt.ByteSize
 
-	peerID               [20]byte
-	mi                   *metainfo.MetaInfo
-	lastSuccessfulResp   tracker.AnnounceResponse
-	lastRespTime         time.Time
-	started, completed   bool
-	downloaded, uploaded int64 // bytes
+	complete, stall bool
+	down, up        bytefmt.ByteSize
+	interval        <-chan time.Time
+	lastResp        time.Time
 )
 
 func init() {
-	mathrand.Seed(time.Now().UTC().UnixNano())
-
-	flag.IntVar(&minSeeders, "s", 15, "minimum number of seeders required to fake data")
-	flag.IntVar(&minLeechers, "l", 15, "minimum number of leechers required to fake data")
-	flag.Float64Var(&baseDownSpeed, "d", 0, "download speed (megabit/s)")
-	flag.Float64Var(&downMargin, "dm", 0.25, "download speed margin (+/-%)")
-	flag.Float64Var(&baseUpSpeed, "u", 0, "upload speed (megabit/s)")
-	flag.Float64Var(&upMargin, "um", 0.25, "upload speed margin (+/-%)")
+	flag.Usage = usage
+	flag.Var(&downSpeed, "down", "download speed")
+	flag.Var(&upSpeed, "up", "upload speed")
 
 	log.SetFlags(0)
 	log.SetOutput(new(logWriter))
+
+	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
 	flag.Parse()
-
-	if baseDownSpeed == 0 || baseUpSpeed == 0 {
-		log.Fatal("Must specify download speed and upload speed")
+	if downSpeed == 0 || upSpeed == 0 || flag.NArg() != 1 {
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	if flag.NArg() != 1 {
-		log.Fatal("One torrent file required")
-	}
-
-	filename := flag.Arg(0)
-
-	var err error
-	mi, err = metainfo.LoadFromFile(filename)
+	meta, err := metainfo.LoadFromFile(flag.Arg(0))
 	if err != nil {
-		log.Fatalln("Error loading torrent:", err)
+		fmt.Fprint(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	sigchan := make(chan os.Signal, 1)
-	signal.Notify(sigchan, os.Interrupt)
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
 
-	go func() {
-		<-sigchan
-		if started {
-			log.Println("Quitting...")
-			announceAndSleep(true)
-		}
-		os.Exit(0)
-	}()
+	_, err = rand.Read(peerID[:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
-	log.Println("Name:", mi.Info.Name)
-	log.Println("Size:", mi.Info.TotalLength(), "bytes")
+	announceURL = meta.Announce
+	hash = meta.HashInfoBytes()
+	info := meta.UnmarshalInfo()
+	size = bytefmt.ByteSize(info.TotalLength())
 
-	baseDownSpeedByte = megabitToByte(baseDownSpeed)
-	baseUpSpeedByte = megabitToByte(baseUpSpeed)
+	log.Printf("Torrent name: %s", info.Name)
+	log.Printf("Torrent size: %.2f", size.Binary())
 
-	cryptorand.Read(peerID[:])
-
+	announce(tracker.Started)
+loop:
 	for {
-		announceAndSleep(false)
+		select {
+		case <-interval:
+			announce(tracker.None)
+		case <-interrupt:
+			break loop
+		}
 	}
+	log.Println("Quitting...")
+	announce(tracker.Stopped)
 }
 
-func announceAndSleep(stopping bool) {
-	var event tracker.AnnounceEvent
-	if stopping {
-		event = tracker.Stopped
-	} else if !started {
-		event = tracker.Started
-	}
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s -down <speed> -up <speed> <torrent file>\n", os.Args[0])
+}
 
-	if started {
-		sincePrevResp := time.Since(lastRespTime).Seconds()
-		downloaded += int64(float64(curDownSpeedByte) * sincePrevResp)
-		downloaded = int64(math.Min(float64(downloaded), float64(mi.Info.TotalLength())))
-		uploaded += int64(float64(curUpSpeedByte) * sincePrevResp)
-
-		if downloaded == mi.Info.TotalLength() && !completed {
+func announce(event tracker.AnnounceEvent) {
+	if !lastResp.IsZero() && !stall {
+		elapsed := time.Since(lastResp).Seconds()
+		down = min(size, down+bytefmt.ByteSize(elapsed*randNoise(downSpeed)))
+		if down == size && !complete {
 			event = tracker.Completed
-			completed = true
+			complete = true
 		}
+		up += bytefmt.ByteSize(elapsed * randNoise(upSpeed))
 	}
 
+	log.Printf("Announce: %.2f downloaded, %.2f uploaded", down.Binary(), up.Binary())
 	req := &tracker.AnnounceRequest{
-		InfoHash:   *mi.Info.Hash,
+		InfoHash:   hash,
 		PeerId:     peerID,
-		Downloaded: downloaded,
-		Left:       uint64(mi.Info.TotalLength() - downloaded),
-		Uploaded:   uploaded,
+		Downloaded: int64(down),
+		Left:       uint64(size - down),
+		Uploaded:   int64(up),
 		Event:      event,
 		NumWant:    -1,
 	}
-
-	hasResp := true
-	var resp tracker.AnnounceResponse
-	var respTime time.Time
-
-	if !started {
-		log.Print("Starting...")
-		for {
-			var err error
-			resp, err = tracker.Announce(mi.Announce, req)
-			if err == nil {
-				respTime = time.Now()
-				break
-			}
-			sleepFor := 10 * time.Second
-			log.Print("Announce error, retrying in ", sleepFor, "...")
-			time.Sleep(sleepFor)
+	resp, err := tracker.Announce(announceURL, req)
+	lastResp = time.Now()
+	if err != nil {
+		if event == tracker.Stopped {
+			log.Println("Announce error")
+			interval = nil
+			return
 		}
-	} else {
-		log.Printf("Announcing - downloaded: %d bytes, uploaded: %d bytes", downloaded, uploaded)
-		if event != tracker.None {
-			log.Println("Event:", event)
-		}
-		var err error
-		resp, err = tracker.Announce(mi.Announce, req)
-		respTime = time.Now()
-		if err != nil {
-			hasResp = false
-			log.Println("Announce error:", err)
-		}
+		log.Println("Announce error, retrying in", retryInterval)
+		interval = time.After(retryInterval)
+		return
 	}
 
-	sleepFor := time.Duration(resp.Interval) * time.Second
-	if !hasResp {
-		sleepFor = time.Duration(lastSuccessfulResp.Interval) * time.Second
+	if event == tracker.Stopped {
+		interval = nil
+		return
 	}
-
-	if hasResp && !stopping {
-		log.Print("Seeders: ", resp.Seeders, ", leechers: ", resp.Leechers)
-		if resp.Seeders < int32(minSeeders) || resp.Leechers < int32(minLeechers) {
-			curDownSpeedByte = 0
-			curUpSpeedByte = 0
-			log.Print("Not enough peers, stalling")
-		} else {
-			curUpSpeedByte = baseUpSpeedByte + int64(randMargin(baseUpSpeedByte, upMargin))
-			if mi.Info.TotalLength()-downloaded > 0 {
-				curDownSpeedByte = baseDownSpeedByte + int64(randMargin(baseDownSpeedByte, downMargin))
-			} else {
-				curDownSpeedByte = 0
-			}
-		}
-		log.Printf("Setting speeds - down: %.3f Mb/s, up: %.3f Mb/s\n",
-			byteToMegabit(curDownSpeedByte),
-			byteToMegabit(curUpSpeedByte))
-		lastSuccessfulResp = resp
-	}
-
-	started = true
-	lastRespTime = respTime
-
-	if !stopping {
-		log.Println("Next announce at", time.Now().Add(sleepFor).Format(time.Kitchen))
-		time.Sleep(sleepFor)
-	}
+	nextInterval := time.Duration(resp.Interval) * time.Second
+	log.Println("Next announce:", time.Now().Add(nextInterval).Format(time.Kitchen))
+	interval = time.After(nextInterval)
 }
 
-func randMargin(n int64, margin float64) float64 {
-	return (mathrand.Float64() - 0.5) * 2 * margin * float64(n)
+func randNoise(n bytefmt.ByteSize) float64 {
+	return float64(n) + (rand.Float64()-0.5)*2*noise*float64(n)
 }
 
-func byteToMegabit(b int64) float64 {
-	return float64(b) * 8 / 1e6
-}
-
-func megabitToByte(megabit float64) int64 {
-	return int64(megabit / 8 * 1e6)
+func min(a, b bytefmt.ByteSize) bytefmt.ByteSize {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 type logWriter struct{}
