@@ -1,0 +1,28 @@
+Ratioboss simulates data download and upload in order to boost your ratio
+on BitTorrent trackers. No data actually flows between you and other peers,
+thus data usage is marginal. Be aware that aside from the transfer speeds
+being randomized, no attempts are made at avoiding detection;
+it is therefore recommended to point this tool at popular torrents.
+
+Here is an example of a ratioboss session set up to download a file
+at 5 MiB/s and upload at 2 MiB/s:
+
+	$ ratioboss -down 5M -up 2M foo.torrent
+	9:31PM Torrent name: Foo
+	9:31PM Torrent size: 8.80 GiB
+	9:31PM Announce: 0.00 B downloaded, 0.00 B uploaded
+	9:31PM Next announce: 10:31PM
+	10:31PM Announce: 8.80 GiB downloaded, 2.64 GiB uploaded
+	10:31PM Next announce: 11:31PM
+	^C10:45PM Quitting...
+	10:46PM Announce: 8.80 GiB downloaded, 4.83 GiB uploaded
+
+INSTALLATION
+
+If you have Go installed:
+
+	$ go get github.com/sprt/ratioboss
+
+Or you can download a precompiled binary at:
+
+	https://github.com/sprt/ratioboss/releases
