@@ -11,7 +11,7 @@ import (
 
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/tracker"
-	"github.com/sprt/bytefmt"
+	"github.com/sprt/byt"
 )
 
 const (
@@ -20,14 +20,14 @@ const (
 )
 
 var (
-	downSpeed, upSpeed bytefmt.ByteSize
+	downSpeed, upSpeed byt.Size
 
 	announceURL  string
 	hash, peerID metainfo.Hash
-	size         bytefmt.ByteSize
+	size         byt.Size
 
 	complete, stall bool
-	down, up        bytefmt.ByteSize
+	down, up        byt.Size
 	interval        <-chan time.Time
 	lastResp        time.Time
 )
@@ -68,7 +68,7 @@ func main() {
 	announceURL = meta.Announce
 	hash = meta.HashInfoBytes()
 	info := meta.UnmarshalInfo()
-	size = bytefmt.ByteSize(info.TotalLength())
+	size = byt.Size(info.TotalLength())
 
 	log.Printf("Torrent name: %s", info.Name)
 	log.Printf("Torrent size: %.2f", size.Binary())
@@ -89,17 +89,18 @@ loop:
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s -down <speed> -up <speed> <torrent file>\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "%s\n", byt.FlagUsage)
 }
 
 func announce(event tracker.AnnounceEvent) {
 	if !lastResp.IsZero() && !stall {
 		elapsed := time.Since(lastResp).Seconds()
-		down = min(size, down+bytefmt.ByteSize(elapsed*randNoise(downSpeed)))
+		down = min(size, down+byt.Size(elapsed*randNoise(downSpeed)))
 		if down == size && !complete {
 			event = tracker.Completed
 			complete = true
 		}
-		up += bytefmt.ByteSize(elapsed * randNoise(upSpeed))
+		up += byt.Size(elapsed * randNoise(upSpeed))
 	}
 
 	log.Printf("Announce: %.2f downloaded, %.2f uploaded", down.Binary(), up.Binary())
@@ -134,11 +135,11 @@ func announce(event tracker.AnnounceEvent) {
 	interval = time.After(nextInterval)
 }
 
-func randNoise(n bytefmt.ByteSize) float64 {
+func randNoise(n byt.Size) float64 {
 	return float64(n) + (rand.Float64()-0.5)*2*noise*float64(n)
 }
 
-func min(a, b bytefmt.ByteSize) bytefmt.ByteSize {
+func min(a, b byt.Size) byt.Size {
 	if a < b {
 		return a
 	}

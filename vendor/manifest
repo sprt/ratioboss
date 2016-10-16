@@ -62,10 +62,10 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/sprt/bytefmt",
-			"repository": "https://github.com/sprt/bytefmt",
+			"importpath": "github.com/sprt/byt",
+			"repository": "https://github.com/sprt/byt",
 			"vcs": "git",
-			"revision": "a866281ea045cca3243413cd80005a1dbdc75e58",
+			"revision": "fc1878b5c1f09d5010ff105a15c85ec81bc777cb",
 			"branch": "master",
 			"notests": true
 		}
