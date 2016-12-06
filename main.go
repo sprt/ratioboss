@@ -1,7 +1,7 @@
 // Ratioboss simulates data download and upload in order to boost your ratio
 // on BitTorrent trackers. No data actually flows between you and other peers,
 // thus data usage is marginal. Be aware that aside from the transfer speeds
-// being randomized, no attempts are made at avoiding detection;
+// being fuzzed, no attempts are made at avoiding detection;
 // it is therefore recommended to point this tool at popular torrents.
 //
 // Here is an example of a ratioboss session set up to download a file
@@ -108,18 +108,18 @@ loop:
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s -down <speed> -up <speed> <torrent file>\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "%s\n", byt.FlagUsage)
+	fmt.Fprintf(os.Stderr, "%s", byt.FlagUsage)
 }
 
 func announce(event tracker.AnnounceEvent) {
 	if !lastResp.IsZero() && !stall {
 		elapsed := time.Since(lastResp).Seconds()
-		down = min(size, down+byt.Size(elapsed*randNoise(downSpeed)))
+		down = min(size, down+byt.Size(elapsed*fuzz(downSpeed)))
 		if down == size && !complete {
 			event = tracker.Completed
 			complete = true
 		}
-		up += byt.Size(elapsed * randNoise(upSpeed))
+		up += byt.Size(elapsed * fuzz(upSpeed))
 	}
 
 	log.Printf("Announce: %.2f downloaded, %.2f uploaded", down.Binary(), up.Binary())
@@ -154,7 +154,7 @@ func announce(event tracker.AnnounceEvent) {
 	interval = time.After(nextInterval)
 }
 
-func randNoise(n byt.Size) float64 {
+func fuzz(n byt.Size) float64 {
 	return float64(n) + (rand.Float64()-0.5)*2*noise*float64(n)
 }
 

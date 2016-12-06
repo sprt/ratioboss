@@ -65,7 +65,7 @@
 			"importpath": "github.com/sprt/byt",
 			"repository": "https://github.com/sprt/byt",
 			"vcs": "git",
-			"revision": "fc1878b5c1f09d5010ff105a15c85ec81bc777cb",
+			"revision": "c20c6b9163d59badd7ee6173901f26789716e400",
 			"branch": "master",
 			"notests": true
 		}

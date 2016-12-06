@@ -1,7 +1,7 @@
 Ratioboss simulates data download and upload in order to boost your ratio
 on BitTorrent trackers. No data actually flows between you and other peers,
 thus data usage is marginal. Be aware that aside from the transfer speeds
-being randomized, no attempts are made at avoiding detection;
+being fuzzed, no attempts are made at avoiding detection;
 it is therefore recommended to point this tool at popular torrents.
 
 Here is an example of a ratioboss session set up to download a file

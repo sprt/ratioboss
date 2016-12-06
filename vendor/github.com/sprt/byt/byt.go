@@ -1,4 +1,5 @@
-// Package bytefmt provides utility functions to format and parse byte quantities.
+// Package bytefmt provides utility functions to format and parse byte
+// quantities.
 package byt
 
 import (
@@ -14,8 +15,8 @@ type Size int64
 // FlagUsage is a partial usage message that applications using a Size as a flag
 // may wish to include in their -help output.
 const FlagUsage = `
-A byte size is a number and optional unit. Units are K,M,G,T,P,E,Z,Y (powers of 1024)
-or KB,MB,... (powers of 1000). It is not case sensitive.
+A byte size is a number and optional unit. Units are K,M,G,T,P,E,Z,Y (powers of
+1024) or KB,MB,... (powers of 1000). It is not case sensitive.
 `
 
 const (
